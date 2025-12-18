@@ -83,6 +83,11 @@ void processSerial(){
     Serial.println("GAME_MODE");
     return;
   }
+  if (strncmp(buffer, "cooldown ", 9) == 0) {
+    cooldown = atoi(buffer + 9);
+    Serial.print("OK_COOLDOWN_");
+    Serial.println(cooldown);
+  }
 
   if(len >= 4 && buffer[2] == ' '){
 
