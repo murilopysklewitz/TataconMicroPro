@@ -9,62 +9,17 @@ const int KA_DIR  = A3;
 const int pinos[4] = { DON_ESQ, KA_ESQ, DON_DIR, KA_DIR };
 const char teclas[4] = { 'f', 'd', 'j', 'k' };
 
-int threshold[4] = { 80, 180, 80, 180 };
+int threshold[4] = { 100, 180, 170, 180 };
 int deltaMin[4]  = { 25,  25,  25,  25  };
 
-unsigned long cooldown = 35;
+unsigned long cooldown = 70;
 unsigned long lastHit[4] = {0,0,0,0};
 int lastValue[4] = {0,0,0,0};
 
 bool configMode = false;
 
-void loopGame() {
-  unsigned long now = millis();
-
-  for (int i = 0; i < 4; i++) {
-    int v  = analogRead(pinos[i]);
-    int dv = v - lastValue[i];
-
-    if (dv > deltaMin[i] &&
-        v > threshold[i] &&
-        now - lastHit[i] > cooldown) {
-
-      Keyboard.press(teclas[i]);
-      delay(8);  
-      Keyboard.release(teclas[i]);
-
-      lastHit[i] = now;
-    }
-
-    lastValue[i] = v;
-  }
-
-  delay(1);
-}
-
-void loopConfig() {
-
-    processSerial();
-  
-  static unsigned long lastSend = 0;
-
-  if (millis() - lastSend > 100) {
-
-    for (int i=0; i<4; i++) {
-      Serial.print("T");
-      Serial.print(i);
-      Serial.print(": ");
-      Serial.print(analogRead(pinos[i]));
-      Serial.print(" | ");
-    }
-
-    Serial.println();
-    lastSend = millis();
-  }
-  
-  delay(10);  
-}
-//aqui preciso criar um processador de serial para economizar memória devido precisar de desempenho adiciono um buffer e finalizo a string com \0
+//aqui preciso criar um processador de serial que vai receber da ferramenta externa pyserial, para economizar memória precisa
+// de desempenho adiciono um buffer e finalizo a string com \0
 void processSerial(){
   if (Serial.available() < 1) return;
 
@@ -118,6 +73,56 @@ void processSerial(){
     }
   }
 }
+
+
+void loopGame() {
+  unsigned long now = millis();
+
+  for (int i = 0; i < 4; i++) {
+    int v  = analogRead(pinos[i]);
+    int dv = v - lastValue[i];
+
+    if (dv > deltaMin[i] &&
+        v > threshold[i] &&
+        now - lastHit[i] > cooldown) {
+
+      Keyboard.press(teclas[i]);
+      delay(20);  
+      Keyboard.release(teclas[i]);
+
+      lastHit[i] = now;
+    }
+
+    lastValue[i] = v;
+  }
+
+  delay(1);
+}
+
+
+void loopConfig() {
+
+    processSerial();
+  
+  static unsigned long lastSend = 0;
+
+  if (millis() - lastSend > 100) {
+
+    for (int i=0; i<4; i++) {
+      Serial.print("T");
+      Serial.print(i);
+      Serial.print(": ");
+      Serial.print(analogRead(pinos[i]));
+      Serial.print(" | ");
+    }
+
+    Serial.println();
+    lastSend = millis();
+  }
+  
+  delay(10);  
+}
+
 
 void setup() {
   Serial.begin(115200);
