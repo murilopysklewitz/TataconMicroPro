@@ -114,8 +114,6 @@ void loopGame() {
 }
 
 void loopConfig() {
-  processSerial();
-  
   static unsigned long lastSend = 0;
 
   if (millis() - lastSend > 100) {
@@ -143,6 +141,8 @@ void setup() {
 }
 
 void loop() {
+  processSerial();
+  
   if(!configMode){
     loopGame();
     return;
