@@ -18,62 +18,76 @@ int lastValue[4] = {0,0,0,0};
 
 bool configMode = false;
 
-//aqui preciso criar um processador de serial que vai receber da ferramenta externa pyserial, para economizar memória precisa
-// de desempenho adiciono um buffer e finalizo a string com \0
 void processSerial(){
   if (Serial.available() < 1) return;
 
   char buffer[32];
-  byte len = Serial.readBytesUntil('\n',buffer, 31);
+  byte len = Serial.readBytesUntil('\n', buffer, 31);
   if(len == 0) return;
-  buffer[len] =  '\0';
+  buffer[len] = '\0';
 
   if(strcmp(buffer, "config") == 0){
     configMode = true;
-    Serial.print("CONFIG_MODE");
+    Serial.println("CONFIG_MODE");
     return;
   }
+  
   if(strcmp(buffer, "play") == 0){
     configMode = false;
     Serial.println("GAME_MODE");
     return;
   }
+  
+  if(strcmp(buffer, "test") == 0){
+    Serial.println("TEST_MODE_START");
+    unsigned long start = millis();
+    
+    while (millis() - start < 5000) {
+      for (int i = 0; i < 4; i++) {
+        Serial.print("v");
+        Serial.print(i);
+        Serial.print(":");
+        Serial.print(analogRead(pinos[i]));
+        if (i < 3) Serial.print("|");
+      }
+      Serial.println();
+      delay(50);
+    }
+    
+    Serial.println("TEST_COMPLETE");
+    return;
+  }
+  
   if (strncmp(buffer, "cooldown ", 9) == 0) {
     cooldown = atoi(buffer + 9);
     Serial.print("OK_COOLDOWN_");
     Serial.println(cooldown);
+    return;
   }
 
   if(len >= 4 && buffer[2] == ' '){
-
     char type = buffer[0];
     int sensor = buffer[1] - '0';
     int value = atoi(buffer + 3);
 
     if(sensor >= 0 && sensor < 4){
       if(type == 't'){
-
         threshold[sensor] = value;
-
-        Serial.print("OK_Threshold");
+        Serial.print("OK_T");
         Serial.print(sensor);
         Serial.print("_");
-        Serial.print(value);
-
-      }else if(type == 'd'){
-
+        Serial.println(value);
+        
+      } else if(type == 'd'){
         deltaMin[sensor] = value;
-
-        Serial.print("OK_Delta");
+        Serial.print("OK_D");
         Serial.print(sensor);
         Serial.print("_");
-        Serial.print(value);
-
+        Serial.println(value);
       }
     }
   }
 }
-
 
 void loopGame() {
   unsigned long now = millis();
@@ -99,30 +113,25 @@ void loopGame() {
   delay(1);
 }
 
-
 void loopConfig() {
-
-    processSerial();
+  processSerial();
   
   static unsigned long lastSend = 0;
 
   if (millis() - lastSend > 100) {
-
-    for (int i=0; i<4; i++) {
-      Serial.print("T");
+    for (int i = 0; i < 4; i++) {
+      Serial.print("v");
       Serial.print(i);
-      Serial.print(": ");
+      Serial.print(":");
       Serial.print(analogRead(pinos[i]));
-      Serial.print(" | ");
+      if (i < 3) Serial.print("|");
     }
-
     Serial.println();
     lastSend = millis();
   }
   
   delay(10);  
 }
-
 
 void setup() {
   Serial.begin(115200);
@@ -131,7 +140,6 @@ void setup() {
   for (int i = 0; i < 4; i++) {
     lastValue[i] = analogRead(pinos[i]);
   }
-
 }
 
 void loop() {
