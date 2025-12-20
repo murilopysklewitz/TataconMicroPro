@@ -18,73 +18,29 @@ int lastValue[4] = {0,0,0,0};
 
 bool configMode = false;
 
-void processSerial(){
-  if (Serial.available() < 1) return;
+void processSerial() {
+  if (Serial.available() > 0) {
+    String cmd = Serial.readStringUntil('\n');
+    cmd.trim();
 
-  char buffer[32];
-  byte len = Serial.readBytesUntil('\n', buffer, 31);
-  if(len == 0) return;
-  buffer[len] = '\0';
-
-  if(strcmp(buffer, "config") == 0){
-    configMode = true;
-    Serial.println("CONFIG_MODE");
-    return;
-  }
-  
-  if(strcmp(buffer, "play") == 0){
-    configMode = false;
-    Serial.println("GAME_MODE");
-    return;
-  }
-  
-  if(strcmp(buffer, "test") == 0){
-    Serial.println("TEST_MODE_START");
-    unsigned long start = millis();
+    if (cmd == "config") { configMode = true; Serial.println("MODE:CONFIG"); }
+    else if (cmd == "play") { configMode = false; Serial.println("MODE:PLAY"); }
     
-    while (millis() - start < 5000) {
-      for (int i = 0; i < 4; i++) {
-        Serial.print("v");
-        Serial.print(i);
-        Serial.print(":");
-        Serial.print(analogRead(pinos[i]));
-        if (i < 3) Serial.print("|");
-      }
-      Serial.println();
-      delay(50);
+    else if (cmd.startsWith("t")) {
+      int sensor = cmd.substring(1,2).toInt();
+      int val = cmd.substring(3).toInt();
+      if(sensor >=0 && sensor <4) threshold[sensor] = val;
+      Serial.print("SET:Threshold["); Serial.print(sensor); Serial.print("]="); Serial.println(val);
     }
-    
-    Serial.println("TEST_COMPLETE");
-    return;
-  }
-  
-  if (strncmp(buffer, "cooldown ", 9) == 0) {
-    cooldown = atoi(buffer + 9);
-    Serial.print("OK_COOLDOWN_");
-    Serial.println(cooldown);
-    return;
-  }
-
-  if(len >= 4 && buffer[2] == ' '){
-    char type = buffer[0];
-    int sensor = buffer[1] - '0';
-    int value = atoi(buffer + 3);
-
-    if(sensor >= 0 && sensor < 4){
-      if(type == 't'){
-        threshold[sensor] = value;
-        Serial.print("OK_T");
-        Serial.print(sensor);
-        Serial.print("_");
-        Serial.println(value);
-        
-      } else if(type == 'd'){
-        deltaMin[sensor] = value;
-        Serial.print("OK_D");
-        Serial.print(sensor);
-        Serial.print("_");
-        Serial.println(value);
-      }
+    else if (cmd.startsWith("d")) {
+      int sensor = cmd.substring(1,2).toInt();
+      int val = cmd.substring(3).toInt();
+      if(sensor >=0 && sensor <4) deltaMin[sensor] = val;
+      Serial.print("SET:Delta["); Serial.print(sensor); Serial.print("]="); Serial.println(val);
+    }
+    else if (cmd.startsWith("c ")) {
+      cooldown = cmd.substring(2).toInt();
+      Serial.print("SET:Cooldown="); Serial.println(cooldown);
     }
   }
 }
@@ -114,21 +70,16 @@ void loopGame() {
 }
 
 void loopConfig() {
-  static unsigned long lastSend = 0;
-
-  if (millis() - lastSend > 100) {
-    for (int i = 0; i < 4; i++) {
-      Serial.print("v");
-      Serial.print(i);
-      Serial.print(":");
-      Serial.print(analogRead(pinos[i]));
-      if (i < 3) Serial.print("|");
+  static unsigned long lastPrint = 0;
+  if (millis() - lastPrint > 50) { 
+    for(int i=0; i<4; i++) {
+      Serial.print(i); Serial.print(":"); Serial.print(analogRead(pinos[i]));
+      if(i<3) Serial.print(",");
     }
     Serial.println();
-    lastSend = millis();
+    lastPrint = millis();
   }
-  
-  delay(10);  
+  return;
 }
 
 void setup() {
@@ -142,11 +93,11 @@ void setup() {
 
 void loop() {
   processSerial();
-  
-  if(!configMode){
-    loopGame();
-    return;
+
+  if (configMode) {
+    loopConfig();
   }
 
-  loopConfig();
+  loopGame();
+  
 }
